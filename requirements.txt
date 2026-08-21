@@ -1,0 +1,49 @@
+# --- Core UI ---
+streamlit>=1.35.0
+
+# --- Audio/Video acquisition & processing ---
+yt-dlp
+pydub>=0.25.1
+ffmpeg-python>=0.2.0
+
+# --- Transcription ---
+# Native transcription moved to Groq API to save cloud RAM!
+
+# --- LLM orchestration & summarization ---
+langchain>=0.2.0
+langchain-core>=0.2.0
+langchain-community>=0.2.0
+langchain-text-splitters>=0.2.0
+langchain-mistralai>=0.1.6
+mistralai>=0.4.0
+
+# --- RAG: vector store & embeddings ---
+langchain-chroma
+chromadb>=0.5.0
+
+# --- Utilities ---
+python-dotenv>=1.0.1
+numpy>=1.26.0
+tqdm>=4.66.0
+
+# --- Live Deployment Compatibility & Groq/Gemini LLMs ---
+audioop-lts>=0.2.1
+groq
+langchain-groq
+langchain-google-genai
+
+
+#new requirements
+
+
+
+langchain-mistralai==0.2.11
+bs4
+streamlit
+python-dotenv
+pypdf
+streamlit==1.61.0
+starlette<1.4.0
+
+SpeechRecognition==3.10.4
+gTTS==2.5.4
