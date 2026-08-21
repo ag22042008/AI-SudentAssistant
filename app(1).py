@@ -27,11 +27,11 @@ from langchain_core.output_parsers import StrOutputParser
 
 # --- Import MinuteMind components ---
 try:
-    from utils.audio_processor import process_input
-    from core.transcriber import transcribe_all
-    from core.summarise import summarize, generate_title
-    from core.extractor import actionable_items, extract_questions, key_decisions
-    from core.rag_engine import build_rag_chain, ask_questions
+    from audio_processor import process_input
+    from transcriber import transcribe_all
+    from summarise import summarize, generate_title
+    from extractor import actionable_items, extract_questions, key_decisions
+    from rag_engine import build_rag_chain, ask_questions
 except ImportError as e:
     st.error(f"Failed to import MinuteMind modules: {e}")
     st.exception(e)
