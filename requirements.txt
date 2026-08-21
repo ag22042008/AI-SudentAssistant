@@ -37,9 +37,8 @@ langchain-google-genai
 
 
 standard-aifc
-langchain-mistralai==0.2.11
+
 bs4
-streamlit
 python-dotenv
 pypdf
 streamlit==1.61.0
