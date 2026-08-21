@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 import speech_recognition as sr
 from gtts import gTTS
 import chromadb
-
+os.environ["USER_AGENT"] = "my-langchain-app/1.0"
 from langchain_community.document_loaders import PyPDFLoader, WebBaseLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_mistralai import MistralAIEmbeddings, ChatMistralAI
