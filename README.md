@@ -2,27 +2,6 @@
 
 Welcome to the **Unified AI Hub**! This is a single, beautiful dashboard that combines two clever AI twins: **MinuteMind** (for handling video/meeting audio) and **CourseMate-AI** (for chatting with document files & websites).
 
----
-
-## 👶 For a 1-Year-Old: How does it work? 🍼
-
-Imagine we have a **Magic Play Box**! 📦✨
-
-1. **The Left Hand Toggle 🎛️**:
-   * It's a shiny red switch. Flip it **UP** to play with **MinuteMind** (Ears).
-   * Flip it **DOWN** to play with **CourseMate-AI** (Eyes).
-
-2. **MinuteMind (The Magic Ears Twin) 🎧🤖**:
-   * You feed him a song or video.
-   * He listens carefully with his big metal ears, writes down the story, and tells you what the people talked about!
-
-3. **CourseMate-AI (The Book Reader Twin) 📚🤖**:
-   * You show him your favorite picture books or web pages.
-   * He puts them in his **Toy Chest** (Database).
-   * When you ask him a question, he pulls the right page out of the toy chest and whispers the answer in your ear!
-
----
-
 ## 🏗️ Architecture Diagram
 
 Below is the secret map showing how the robots process your files:
