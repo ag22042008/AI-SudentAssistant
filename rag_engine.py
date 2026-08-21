@@ -128,7 +128,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough,RunnableLambda
 
-from core.vectore_store import load_vector_store,build_vector_store,get_retriever,embedding_model
+from vectore_store import load_vector_store,build_vector_store,get_retriever,embedding_model
 
 def get_llm():
     return ChatMistralAI(
