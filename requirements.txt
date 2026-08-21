@@ -36,7 +36,7 @@ langchain-google-genai
 #new requirements
 
 
-
+standard-aifc
 langchain-mistralai==0.2.11
 bs4
 streamlit
