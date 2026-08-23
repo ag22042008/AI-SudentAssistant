@@ -354,6 +354,28 @@ def cm_clear_database():
     st.session_state.cm_messages = []
     st.session_state.cm_processed_files = []
 
+def cm_extract_text(content) -> str:
+    """Normalize an LLM response's .content into a plain string.
+
+    Newer Gemini models (via langchain-google-genai) can return content as
+    either a plain string or a list of content blocks, e.g.
+    [{'type': 'text', 'text': '...', 'extras': {'signature': '...'}}].
+    This pulls out just the human-readable text in either case.
+    """
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for block in content:
+            if isinstance(block, str):
+                parts.append(block)
+            elif isinstance(block, dict):
+                # Only surface actual text blocks; skip tool calls, signatures, etc.
+                if block.get("type") in (None, "text") and "text" in block:
+                    parts.append(block["text"])
+        return "\n".join(p for p in parts if p).strip()
+    return str(content)
+
 def cm_answer_question(query, k, fetch_k, lambda_mult, provider, model_name, temperature):
     retriever = st.session_state.cm_vectorstore.as_retriever(
         search_type="mmr", search_kwargs={"k": k, "fetch_k": fetch_k, "lambda_mult": lambda_mult}
@@ -362,6 +384,7 @@ def cm_answer_question(query, k, fetch_k, lambda_mult, provider, model_name, tem
     context = "\n\n".join(doc.page_content for doc in docs)
     final_prompt = CM_PROMPT.invoke({"context": context, "question": query})
     response = cm_get_llm(provider, model_name, temperature).invoke(final_prompt)
+    answer_text = cm_extract_text(response.content)
     seen, sources, passages = set(), [], []
     for doc in docs:
         source = doc.metadata.get("source")
@@ -373,7 +396,7 @@ def cm_answer_question(query, k, fetch_k, lambda_mult, provider, model_name, tem
             seen.add(label)
             sources.append(label)
             passages.append({"label": label, "text": doc.page_content})
-    return response.content, sources, passages
+    return answer_text, sources, passages
 
 def cm_transcribe_audio(audio_bytes: bytes) -> Optional[str]:
     recognizer = sr.Recognizer()
