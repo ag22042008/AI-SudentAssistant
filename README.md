@@ -1,10 +1,10 @@
 # 🔗 Unified AI Hub
 
-Welcome to the **Unified AI Hub**! This is a single, beautiful dashboard that combines two clever AI twins: **MinuteMind** (for handling video/meeting audio) and **CourseMate-AI** (for chatting with document files & websites).
+Welcome to the **Unified AI Hub**! This is a single, beautiful dashboard that combines three clever AI twins: **MinuteMind** (for handling video/meeting audio), **CourseMate-AI** (for chatting with document files & websites), and **Socratic Tutor** (for Socratic learning and automated progress tracking).
 
 ## 🏗️ Architecture Diagram
 
-Below is the secret map showing how the robots process your files:
+Below is the secret map showing how the robots process your files and questions:
 
 ```mermaid
 graph TD
@@ -12,6 +12,7 @@ graph TD
     
     Sidebar -->|MinuteMind Mode| MM[🎧 MinuteMind Console]
     Sidebar -->|CourseMate Mode| CM[📚 CourseMate-AI Console]
+    Sidebar -->|Socratic Mode| ST[🎓 Socratic Tutor Console]
 
     subgraph MinuteMind: Audio/Video Engine
         MM -->|1. Upload File| AP[🎵 Audio Processor]
@@ -26,9 +27,16 @@ graph TD
         TS -->|3. Keep in storage| DB[(📦 Chroma Vector Database)]
         DB -->|4. Search page blocks| QA[💬 Q&A Engine + Google TTS]
     end
+
+    subgraph Socratic Tutor: Learning Engine
+        ST -->|1. Ask Question| HE[💡 LLM Hint Engine]
+        HE -->|2. Escalate 0-4| Hint[Pedagogical Escaping]
+        Hint -->|3. Resolve & Log| PT[📊 Pandas Progress Tracking]
+    end
     
     RAG_MM -->|Summaries & Chat Answers| User
     QA -->|Read Aloud Grounded Answers| User
+    PT -->|Weak/Strong Topic Insights| User
 ```
 
 ---
@@ -62,6 +70,12 @@ To run the unified dashboard:
 * **Smart Storage**: Uses Chroma DB folder to persist the document blocks.
 * **Dual Engines**: Supports Gemini models (Flash, Flash-Lite, Pro) and Mistral models.
 * **Voice Power**: Query by voice using your microphone; have answers read back to you with custom TTS styles.
+
+### 3. Socratic Tutor (Learning & Progress Channel)
+* **Escalating Hints**: Employs an intelligent 0-4 hint escalation level rule to gently guide understanding instead of just revealing answers.
+* **Topic Classification**: Uses a lightweight LLM call to automatically extract semantic topics from raw questions.
+* **Progress Tracking**: Consolidates history across subjects to dynamically calculate and present **Weak** and **Strong** learning topics using Pandas aggregation.
+* **Isolated Environment**: Features rigorous state management so jumping between consoles never crashes your progress.
 
 ---
 
