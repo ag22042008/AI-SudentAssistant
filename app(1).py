@@ -196,7 +196,16 @@ div[data-baseweb="input"], div[data-baseweb="select"] > div, div[data-baseweb="b
 @st.cache_resource(show_spinner=False)
 def cm_get_embedding_model(provider: str):
     if provider == "Google Gemini":
-        return GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+        api_key = os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
+        if not api_key:
+            raise RuntimeError(
+                "Missing Google API key. Set GOOGLE_API_KEY in your Streamlit secrets "
+                "(Manage app -> Settings -> Secrets) or your .env file."
+            )
+        # NOTE: both 'models/embedding-001' and 'models/text-embedding-004' have been
+        # superseded. 'gemini-embedding-001' is the current generally-available
+        # Gemini embedding model (as of mid-2026).
+        return GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001", google_api_key=api_key)
     return MistralAIEmbeddings()
 
 @st.cache_resource(show_spinner=False)
@@ -225,18 +234,54 @@ def cm_load_existing_vectorstore(provider: str):
     return None
 
 def cm_add_chunks_to_store(chunks, provider: str):
+    """Embed and add chunks to the vector store.
+
+    Raises a clear, actionable error instead of letting the raw
+    GoogleGenerativeAIError/other SDK exception bubble up unformatted.
+    """
     if not chunks:
         return
+
+    # Drop chunks with empty/whitespace-only content - some embedding
+    # APIs reject the entire batch if any text is empty.
+    chunks = [c for c in chunks if c.page_content and c.page_content.strip()]
+    if not chunks:
+        return
+
     cm_clear_chroma_system_cache()
-    if st.session_state.cm_vectorstore is None:
-        st.session_state.cm_vectorstore = Chroma.from_documents(
-            documents=chunks,
-            embedding=cm_get_embedding_model(provider),
-            persist_directory=PERSIST_DIR,
-            collection_name=COLLECTION_NAME,
-        )
-    else:
-        st.session_state.cm_vectorstore.add_documents(chunks)
+    try:
+        if st.session_state.cm_vectorstore is None:
+            st.session_state.cm_vectorstore = Chroma.from_documents(
+                documents=chunks,
+                embedding=cm_get_embedding_model(provider),
+                persist_directory=PERSIST_DIR,
+                collection_name=COLLECTION_NAME,
+            )
+        else:
+            st.session_state.cm_vectorstore.add_documents(chunks)
+    except Exception as e:
+        msg = str(e)
+        if provider == "Google Gemini" and any(
+            kw in msg for kw in ("API key", "API_KEY", "PERMISSION_DENIED", "403", "UNAUTHENTICATED")
+        ):
+            raise RuntimeError(
+                "Google Gemini rejected the request — this is almost always an invalid or "
+                "missing API key. Check GOOGLE_API_KEY in Streamlit secrets (Manage app -> "
+                f"Settings -> Secrets). Raw error: {msg}"
+            ) from e
+        if provider == "Google Gemini" and any(kw in msg for kw in ("404", "not found", "NOT_FOUND")):
+            raise RuntimeError(
+                "Google Gemini embedding model not found — it may have been deprecated or "
+                "unavailable for your API key/project. Run ListModels (see Gemini API docs) "
+                "to see which embedding models your key currently supports, and update the "
+                f"model name in cm_get_embedding_model accordingly. Raw error: {msg}"
+            ) from e
+        if any(kw in msg for kw in ("429", "RESOURCE_EXHAUSTED", "quota", "rate limit")):
+            raise RuntimeError(
+                f"Rate limit / quota exceeded while embedding documents. Try again shortly, "
+                f"or reduce the number/size of documents indexed at once. Raw error: {msg}"
+            ) from e
+        raise RuntimeError(f"Embedding failed ({type(e).__name__}): {msg}") from e
 
 def cm_process_documents(uploaded_files, urls, chunk_size, chunk_overlap, provider: str):
     splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
@@ -261,11 +306,14 @@ def cm_process_documents(uploaded_files, urls, chunk_size, chunk_overlap, provid
             c.metadata["source"] = uploaded_file.name
             c.metadata["doc_type"] = "pdf"
         if chunks:
-            cm_add_chunks_to_store(chunks, provider)
-            added.append({"name": uploaded_file.name, "type": "pdf", "chunks": len(chunks)})
+            try:
+                cm_add_chunks_to_store(chunks, provider)
+                added.append({"name": uploaded_file.name, "type": "pdf", "chunks": len(chunks)})
+            except Exception as e:
+                skipped.append({"name": uploaded_file.name, "reason": str(e)})
         else:
             skipped.append({"name": uploaded_file.name, "reason": "No chunks generated"})
-            
+
     if urls:
         try:
             loader = WebBaseLoader(urls)
@@ -278,12 +326,15 @@ def cm_process_documents(uploaded_files, urls, chunk_size, chunk_overlap, provid
             for c in chunks:
                 c.metadata["doc_type"] = "url"
             if chunks:
-                cm_add_chunks_to_store(chunks, provider)
-                counts = defaultdict(int)
-                for c in chunks:
-                    counts[c.metadata.get("source", "unknown")] += 1
-                for src, count in counts.items():
-                    added.append({"name": src, "type": "url", "chunks": count})
+                try:
+                    cm_add_chunks_to_store(chunks, provider)
+                    counts = defaultdict(int)
+                    for c in chunks:
+                        counts[c.metadata.get("source", "unknown")] += 1
+                    for src, count in counts.items():
+                        added.append({"name": src, "type": "url", "chunks": count})
+                except Exception as e:
+                    skipped.append({"name": ", ".join(urls), "reason": str(e)})
             else:
                 skipped.append({"name": ", ".join(urls), "reason": "No text generated"})
     return added, skipped
