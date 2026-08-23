@@ -788,6 +788,19 @@ elif app_mode == "CourseMate-AI (Documents)":
         if typed_query:
             cm_handle_query(typed_query, k, fetch_k, lambda_mult, cm_provider_choice, model_name, temperature, voice_answers, voice_mode)
 elif app_mode == "🎓 Socratic Tutor":
+    st.markdown("""
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+    .st-eyebrow { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; letter-spacing: 0.28em; text-transform: uppercase; color: #ffb454; margin-bottom: 0.4rem; }
+    .st-hero-title { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: clamp(2.1rem, 4.5vw, 3.4rem); background: linear-gradient(120deg, #ffffff 0%, #ffb454 55%, #6c5ce7 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .st-hero-tagline { color: #808a9e; font-size: 0.92rem; max-width: 500px; line-height: 1.6; margin-bottom: 1rem; }
+    </style>
+    <div class="st-eyebrow">Guided Academic Learning</div>
+    <div class="st-hero-title">Socratic Tutor</div>
+    <div class="st-hero-tagline">Ask an academic question, and I will strictly guide you to the answer using Socratic hints.</div>
+    <hr>
+    """, unsafe_allow_html=True)
+    
     # Reset function
     def socratic_reset_session():
         st.session_state.socratic_messages = []
