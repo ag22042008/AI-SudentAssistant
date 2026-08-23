@@ -37,7 +37,7 @@ try:
 except ImportError as e:
     st.error(f"Failed to import MinuteMind modules: {e}")
     st.exception(e)
-    st.stop()
+    # st.stop() patched out for UI layout testing
 
 import pandas as pd
 try:
@@ -87,116 +87,200 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+
+def get_unified_css(theme, text_size):
+    if theme == "dark":
+        bg_primary = "#0D1318"
+        bg_surface = "#141C24"
+        bg_surface_alt = "#1C2631"
+        accent_primary = "#5AA1D1"
+        accent_secondary = "#3B6B8A"
+        text_primary = "#E6EDF2"
+        text_muted = "#8E9CA8"
+        border = "#2B3A4A"
+    else:
+        bg_primary = "#F4F7F9"
+        bg_surface = "#FFFFFF"
+        bg_surface_alt = "#E8EEF2"
+        accent_primary = "#3B6B8A"
+        accent_secondary = "#698B9F"
+        text_primary = "#1C2A34"
+        text_muted = "#526A7A"
+        border = "#D1DDE5"
+
+    if text_size == "large":
+        base_size = "18px"
+        h1_size = "2.5rem"
+        chat_size = "1.15rem"
+        sm_size = "0.95rem"
+    else:
+        base_size = "16px"
+        h1_size = "2.2rem"
+        chat_size = "0.95rem"
+        sm_size = "0.8rem"
+
+    return f"""
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap');
+    
+    :root {{
+        --bg-primary: {bg_primary};
+        --bg-surface: {bg_surface};
+        --bg-surface-alt: {bg_surface_alt};
+        --accent-primary: {accent_primary};
+        --accent-secondary: {accent_secondary};
+        --text-primary: {text_primary};
+        --text-muted: {text_muted};
+        --border: {border};
+        
+        --font-base: {base_size};
+        --font-h1: {h1_size};
+        --font-chat: {chat_size};
+        --font-sm: {sm_size};
+    }}
+    
+    html, body, [class*="css"] {{ 
+        background-color: var(--bg-primary) !important; 
+        color: var(--text-primary) !important; 
+        font-family: 'DM Sans', sans-serif !important;
+        font-size: var(--font-base) !important;
+    }}
+    
+    .stApp {{ background: var(--bg-primary) !important; }}
+    [data-testid="stSidebar"] {{ background: var(--bg-surface-alt) !important; border-right: 1px solid var(--border) !important; }}
+    [data-testid="stSidebar"] * {{ color: var(--text-primary) !important; }}
+    
+    h1, h2, h3, .display {{ font-family: 'Outfit', sans-serif !important; color: var(--text-primary) !important; }}
+    h1 {{ font-size: var(--font-h1) !important; }}
+    
+    .stButton>button {{ 
+        background-color: var(--bg-surface); 
+        color: var(--text-primary) !important; 
+        border: 1px solid var(--border); 
+        border-radius: 12px; 
+        font-family: 'DM Sans', sans-serif; 
+        font-weight: 500; 
+        transition: all 0.2s ease; 
+    }}
+    .stButton>button:hover, .stButton>button:focus-visible {{ 
+        border-color: var(--accent-primary);
+        box-shadow: 0 0 0 2px var(--accent-secondary); 
+    }}
+    
+    .stButton>button[kind="primary"] {{
+        background-color: var(--accent-primary) !important;
+        color: #ffffff !important;
+        border: none !important;
+    }}
+    
+    /* Inputs */
+    div[data-baseweb="input"], div[data-baseweb="select"] > div, div[data-baseweb="base-input"] {{ 
+        background-color: var(--bg-surface) !important; 
+        border: 1px solid var(--border) !important; 
+        border-radius: 8px !important; 
+    }}
+    div[data-baseweb]:focus-within {{ 
+        border-color: var(--accent-primary) !important; 
+        box-shadow: 0 0 0 2px var(--accent-secondary) !important; 
+    }}
+    [data-testid="stTextArea"] textarea, [data-testid="stChatInput"] textarea {{ 
+        background-color: var(--bg-surface) !important; 
+        color: var(--text-primary) !important;
+        font-size: var(--font-chat) !important;
+    }}
+    
+    /* MinuteMind Layout */
+    .channel {{ 
+        background: var(--bg-surface); 
+        border: 1px solid var(--border); 
+        border-radius: 16px; 
+        padding: 1.5rem; 
+        margin-bottom: 1.2rem; 
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); 
+    }}
+    .channel-tag {{ font-family: 'Outfit', sans-serif; font-size: var(--font-sm); color: var(--accent-secondary); font-weight: 600; text-transform: uppercase; margin-bottom: 0.6rem; }}
+    .channel-title {{ font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 1.4rem; color: var(--accent-primary); }}
+    .channel-body {{ font-size: var(--font-chat); line-height: 1.7; color: var(--text-primary); }}
+    
+    /* CourseMate Layout */
+    .idx-card, .idx-hero-card, [data-testid="stExpander"] {{ 
+        background: var(--bg-surface); 
+        border: 1px solid var(--border); 
+        border-radius: 12px; 
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }}
+    .idx-hero-card {{ padding: 1.5rem; margin-bottom: 1.2rem; }}
+    .idx-card {{ padding: 0.8rem; margin-bottom: 0.5rem; }}
+    .idx-step-num {{ font-family: 'Outfit', sans-serif; font-size: 1.1rem; color: var(--accent-primary); border: 2px solid var(--accent-primary); border-radius: 50%; width: 1.8rem; height: 1.8rem; display: flex; align-items: center; justify-content: center; }}
+    .idx-step-title {{ font-family: 'Outfit', sans-serif; font-size: 1.1rem; font-weight: 600; color: var(--text-primary); }}
+    .idx-passage {{ background-color: var(--bg-surface-alt); border-left: 4px solid var(--accent-primary); border-radius: 6px; padding: 0.8rem; margin: 0.4rem 0; font-size: var(--font-sm); color: var(--text-muted); }}
+    
+    /* Chat bubbles (MM, CM, Socratic) */
+    [data-testid="stChatMessage"] {{ background-color: transparent; border: none; padding: 0; margin-bottom: 1rem; }}
+    .msg {{ margin-bottom: 1rem; display: flex; flex-direction: column; }}
+    .msg-label {{ font-family: 'Outfit', sans-serif; font-size: var(--font-sm); font-weight: 600; margin-bottom: 0.3rem; color: var(--text-muted); flex: unset !important; }}
+    .bubble {{ padding: 0.8rem 1.2rem; border-radius: 16px; font-size: var(--font-chat); line-height: 1.6; max-width: 85%; box-shadow: 0 2px 4px rgba(0,0,0,0.02); margin-top: 0; }}
+    .msg.user .bubble {{ background: var(--accent-primary); color: #ffffff !important; border: none; align-self: flex-end; border-bottom-right-radius: 4px; }}
+    .msg.assistant .bubble {{ background: var(--bg-surface); color: var(--text-primary) !important; border: 1px solid var(--border); align-self: flex-start; border-bottom-left-radius: 4px; }}
+    .msg.user {{ align-items: flex-end; }}
+    
+    /* Socratic Knowledge Node */
+    .knowledge-node-container {{
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin: 2rem 0;
+        position: relative;
+        padding: 0 1rem;
+    }}
+    .knowledge-node-line {{
+        position: absolute;
+        top: 50%;
+        left: 1rem;
+        right: 1rem;
+        height: 2px;
+        background: var(--border);
+        transform: translateY(-50%);
+        z-index: 0;
+    }}
+    .knowledge-node {{
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: var(--bg-surface);
+        border: 2px solid var(--border);
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+    }}
+    .knowledge-node.active {{
+        background: var(--accent-primary);
+        border-color: var(--accent-primary);
+        box-shadow: 0 0 10px var(--accent-secondary);
+    }}
+    @media (prefers-reduced-motion: reduce) {{
+        .knowledge-node {{ transition: none; }}
+        .stButton>button {{ transition: none; }}
+    }}
+    
+    /* Clean up empty containers */
+    [data-testid="stDecoration"] {{ display: none; }}
+    </style>
+    """
+
+if "theme" not in st.session_state: st.session_state.theme = "light"
+if "text_size" not in st.session_state: st.session_state.text_size = "standard"
+st.markdown(get_unified_css(st.session_state.theme, st.session_state.text_size), unsafe_allow_html=True)
+
+
 # ==========================================================================
 # Styles (MinuteMind & CourseMate)
 # ==========================================================================
-MM_CSS = """
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
-:root {
-    --bg: #0b0e14; --surface: #12161f; --surface-2: #1a1f2b; --border: #242a38;
-    --accent: #6c5ce7; --accent-2: #ffb454; --live: #ff5470; --text: #e7e9f2; --text-muted: #808a9e;
-}
-html, body, [class*="css"] { background-color: var(--bg) !important; color: var(--text) !important; font-family: 'Inter', sans-serif;}
-.stApp { background: var(--bg) !important; }
-code, .mono { font-family: 'IBM Plex Mono', monospace !important; }
-h1, h2, h3, .display { font-family: 'Space Grotesk', sans-serif !important; }
-[data-testid="stSidebar"] { background: var(--surface) !important; border-right: 1px solid var(--border) !important; }
-[data-testid="stSidebar"] * { color: var(--text) !important; }
-.eyebrow { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; letter-spacing: 0.28em; text-transform: uppercase; color: var(--accent-2); margin-bottom: 0.4rem; }
-.brand-mark { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 1.15rem; }
-.brand-sub { font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; color: var(--text-muted); text-transform: uppercase; margin-top: 0.15rem; }
-.hero-title { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: clamp(2.1rem, 4.5vw, 3.4rem); background: linear-gradient(120deg, #ffffff 0%, var(--accent-2) 55%, var(--accent) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-.hero-tagline { color: var(--text-muted); font-size: 0.92rem; max-width: 460px; line-height: 1.6; }
-.hero-wave { display: flex; align-items: flex-end; gap: 3px; height: 46px; margin: 1.1rem 0; }
-.hero-wave .hbar { width: 4px; border-radius: 2px; height: var(--h); background: linear-gradient(180deg, var(--accent-2), var(--accent)); transform-origin: bottom; animation: wavepulse infinite ease-in-out; }
-@keyframes wavepulse { 0%, 100% { transform: scaleY(0.45); } 50% { transform: scaleY(1); } }
-.chain-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0.15rem; border-bottom: 1px solid var(--border); font-size: 0.76rem; }
-.chain-num { font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; color: var(--text-muted); width: 1.4rem; }
-.chain-label { flex: 1; color: var(--text); }
-.chain-label.pending { color: var(--text-muted); }
-.mini-wave { display: flex; align-items: flex-end; gap: 2px; height: 14px; }
-.mini-wave .mbar { width: 3px; border-radius: 1px; }
-.mbar.done { background: var(--accent-2); }
-.mbar.pending { background: var(--border); }
-.channel { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1.35rem 1.5rem; margin-bottom: 1rem; position: relative; overflow: hidden; }
-.channel::before { content: ''; position: absolute; top: 0; left: 0; width: 3px; height: 100%; background: linear-gradient(180deg, var(--accent), var(--accent-2)); }
-.channel-tag { font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; color: var(--accent-2); margin-bottom: 0.6rem; }
-.channel-body { font-size: 0.9rem; line-height: 1.75; }
-.channel-body ul { margin: 0.3rem 0 0.3rem 1.1rem; padding: 0; }
-.channel-body strong { color: var(--accent-2); }
-.channel-title { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 1.35rem; }
-.mm-badge { display: inline-block; padding: 0.28rem 0.7rem; border-radius: 5px; font-family: 'IBM Plex Mono', monospace; font-size: 0.66rem; border: 1px solid var(--border); color: var(--text-muted); margin-right: 0.4rem; }
-.led { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #ff5470; margin-right: 0.4rem; animation: ledpulse 1.4s infinite; }
-@keyframes ledpulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
-.chat-log { max-height: 380px; overflow-y: auto; margin-bottom: 0.9rem; }
-.msg { margin-bottom: 0.85rem; display: flex; flex-direction: column; }
-.msg-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.62rem; margin-bottom: 0.2rem; }
-.msg.user { align-items: flex-end; }
-.msg.user .msg-label { color: var(--accent-2); }
-.msg.assistant .msg-label { color: var(--accent); }
-.bubble { padding: 0.6rem 0.95rem; border-radius: 9px; font-size: 0.87rem; line-height: 1.6; max-width: 88%; white-space: pre-wrap; }
-.msg.user .bubble { background: rgba(255,180,84,0.1); border: 1px solid rgba(255,180,84,0.25); }
-.msg.assistant .bubble { background: rgba(108,92,231,0.12); border: 1px solid rgba(108,92,231,0.28); }
-.empty-panel { text-align: center; padding: 3.5rem 1.5rem; border: 1px dashed var(--border); border-radius: 10px; }
-</style>
-"""
+MM_CSS = ""
 
-CM_CSS = """
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,600;1,6..72,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
-:root {
-    --bg: #1B222C; --panel: #1F2733; --panel-2: #171D26; --gold: #D3A360;
-    --gold-dim: rgba(211,163,96,0.35); --text: #E8E6E1; --text-dim: #8B93A1; --line: rgba(211,163,96,0.22);
-}
-[data-testid="stAppViewContainer"] { background-color: var(--bg); }
-[data-testid="stHeader"] { background-color: transparent; }
-html, body, [class*="css"] { font-family: 'IBM Plex Sans', sans-serif; color: var(--text); }
-.block-container { padding-top: 2rem; }
-[data-testid="stSidebar"] { background-color: var(--panel); border-right: 1px solid var(--line); }
-[data-testid="stSidebar"] * { color: var(--text) !important; }
-.idx-step { display: flex; align-items: center; gap: 0.55rem; margin: 0.2rem 0; }
-.idx-step-num { font-family: 'Newsreader', serif; font-size: 1rem; color: var(--gold); border: 1px solid var(--gold); border-radius: 50%; width: 1.6rem; height: 1.6rem; display: flex; align-items: center; justify-content: center; }
-.idx-step-title { font-family: 'Newsreader', serif; font-size: 1.1rem; font-weight: 600; color: var(--gold); }
-.idx-step-sub { font-family: 'IBM Plex Mono', monospace; font-size: 0.66rem; text-transform: uppercase; color: var(--text-dim) !important; margin: 0.1rem 0 0.7rem 2.15rem; }
-[data-testid="stSidebar"] .stTabs [data-baseweb="tab-list"] { gap: 4px; border-bottom: 1px solid var(--line); }
-[data-testid="stSidebar"] .stTabs [data-baseweb="tab"] { font-family: 'IBM Plex Mono', monospace; font-size: 0.76rem; text-transform: uppercase; color: var(--text-dim) !important; padding: 0.4rem 0.6rem; }
-[data-testid="stSidebar"] .stTabs [aria-selected="true"] { color: var(--gold) !important; border-bottom: 2px solid var(--gold); }
-div[data-baseweb="input"], div[data-baseweb="select"] > div, div[data-baseweb="base-input"] { background-color: var(--panel-2) !important; border: 1px solid var(--gold-dim) !important; border-radius: 5px !important; }
-[data-testid="stTextArea"] textarea { background-color: var(--panel-2) !important; border: 1px solid var(--gold-dim) !important; }
-[data-testid="stFileUploaderDropzone"] { background-color: var(--panel-2); border: 1px dashed var(--gold-dim); }
-[data-testid="stSlider"] label p, [data-testid="stNumberInput"] label p { font-family: 'IBM Plex Mono', monospace !important; font-size: 0.68rem !important; text-transform: uppercase; color: var(--text-dim) !important; }
-.stButton>button { background-color: transparent; color: var(--text) !important; border: 1px solid var(--gold); border-radius: 6px; font-family: 'IBM Plex Sans', sans-serif; font-weight: 500; transition: background-color 0.15s ease; }
-.stButton>button:hover { background-color: rgba(211,163,96,0.12); border-color: var(--gold); }
-.idx-tag { display: inline-flex; align-items: center; gap: 0.3rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: var(--gold); border: 1px solid var(--gold-dim); border-radius: 4px; padding: 0.15rem 0.55rem; }
-.idx-card { position: relative; background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; padding: 0.55rem 0.7rem; margin-bottom: 0.5rem; }
-.idx-card-num { font-family: 'IBM Plex Mono', monospace; font-size: 0.66rem; color: var(--gold); }
-.idx-card-stamp { float: right; font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; text-transform: uppercase; color: var(--gold); border: 1px solid var(--gold); border-radius: 20px; padding: 0.03rem 0.4rem; }
-.idx-card-name { font-weight: 600; font-size: 0.87rem; margin-top: 0.15rem; word-break: break-word; }
-.idx-card-meta { font-family: 'IBM Plex Mono', monospace; font-size: 0.66rem; color: var(--text-dim); }
-.idx-status { display: inline-flex; align-items: center; gap: 0.4rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; padding: 0.25rem 0.7rem; border-radius: 20px; border: 1px solid var(--line); }
-.idx-status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
-.idx-hero-card { border: 1px solid var(--line); border-radius: 8px; padding: 1.3rem 1.5rem; margin-bottom: 1.2rem; background: var(--panel); }
-.idx-hero-eyebrow { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: var(--gold); text-transform: uppercase; margin-bottom: 0.45rem; }
-.idx-hero-title { font-family: 'Newsreader', serif; font-size: 1.6rem; font-weight: 600; color: var(--text); }
-.idx-hero-sub { color: var(--text-dim); font-size: 0.95rem; }
-.idx-stats { display: flex; gap: 0.8rem; margin-bottom: 1.2rem; }
-.idx-stat { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 0.5rem 0.85rem; min-width: 8rem; }
-.idx-stat-num { font-family: 'Newsreader', serif; font-size: 1.3rem; font-weight: 600; color: var(--gold); }
-.idx-stat-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.66rem; color: var(--text-dim); text-transform: uppercase; }
-.idx-empty { border: 1px dashed var(--gold-dim); border-radius: 8px; padding: 1.8rem 1.4rem; text-align: center; color: var(--text-dim); background-color: rgba(211,163,96,0.04); }
-.idx-empty b { color: var(--gold); }
-[data-testid="stExpander"] { border: 1px solid var(--line); border-radius: 8px; background-color: var(--panel); }
-[data-testid="stChatMessage"] { background-color: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 0.5rem 0.75rem; }
-.idx-footnotes { margin-top: 0.5rem; padding-top: 0.4rem; border-top: 1px dashed var(--line); }
-.idx-footnote-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--text-dim); margin-right: 0.4rem; text-transform: uppercase; }
-.idx-badge { display: inline-block; font-family: 'IBM Plex Mono', monospace; font-size: 0.74rem; background-color: rgba(211,163,96,0.1); border: 1px solid var(--gold-dim); color: var(--gold); padding: 0.05rem 0.5rem; border-radius: 20px; margin-right: 0.3rem; }
-.idx-passage { background-color: var(--panel-2); border-left: 3px solid var(--gold); border-radius: 4px; padding: 0.6rem 0.8rem; margin: 0.3rem 0; font-size: 0.88rem; color: var(--text-dim); max-height: 220px; overflow-y: auto; white-space: pre-wrap; }
-[data-testid="stBottom"] > div { background-color: var(--bg); border-top: 1px solid var(--line); }
-[data-testid="stChatInput"] textarea { background-color: var(--panel-2); color: var(--text); }
-[data-testid="stChatInput"] { border: 1px solid var(--line); border-radius: 6px; }
-</style>
-"""
+CM_CSS = ""
 
 # ==========================================================================
 # CourseMate-AI Functions
@@ -571,7 +655,18 @@ def mm_run_pipeline(source: str) -> bool:
 # ==========================================================================
 # Main Streamlit Routing
 # ==========================================================================
+
+st.sidebar.markdown("### 🎛️ Comfort Setup")
+theme_choice = st.sidebar.radio("Theme", ["Light", "Dark"], index=0 if st.session_state.theme=="light" else 1, horizontal=True)
+size_choice = st.sidebar.radio("Text Size", ["Standard", "Large"], index=0 if st.session_state.text_size=="standard" else 1, horizontal=True)
+if theme_choice.lower() != st.session_state.theme or size_choice.lower() != st.session_state.text_size:
+    st.session_state.theme = theme_choice.lower()
+    st.session_state.text_size = size_choice.lower()
+    st.rerun()
+
+st.sidebar.divider()
 st.sidebar.title("Navigation Rail")
+
 app_mode = st.sidebar.radio("Active Console", ["MinuteMind (Video)", "CourseMate-AI (Documents)", "🎓 Socratic Tutor"])
 st.sidebar.divider()
 
@@ -870,7 +965,12 @@ elif app_mode == "🎓 Socratic Tutor":
     
     # Hint Level Indicator
     if st.session_state.socratic_current_question and not st.session_state.socratic_completed:
-        st.progress(st.session_state.socratic_hint_level / 4, text=f"Hint Level {st.session_state.socratic_hint_level} of 4")
+        nodes_html = "<div class='knowledge-node-container'><div class='knowledge-node-line'></div>"
+        for i in range(5):
+            cls = "knowledge-node active" if i <= st.session_state.socratic_hint_level else "knowledge-node"
+            nodes_html += f"<div class='{cls}'></div>"
+        nodes_html += "</div>"
+        st.markdown(nodes_html, unsafe_allow_html=True)
     
     # Display chat history
     for message in st.session_state.socratic_messages:
