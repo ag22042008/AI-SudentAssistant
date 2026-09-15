@@ -19,8 +19,8 @@ import chromadb
 os.environ["USER_AGENT"] = "my-langchain-app/1.0"
 from langchain_community.document_loaders import PyPDFLoader, WebBaseLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_mistralai import MistralAIEmbeddings, ChatMistralAI
-from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_groq import ChatGroq
 from langchain_community.vectorstores import Chroma
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough, RunnableLambda
@@ -202,25 +202,20 @@ div[data-baseweb="input"], div[data-baseweb="select"] > div, div[data-baseweb="b
 # CourseMate-AI Functions
 # ==========================================================================
 @st.cache_resource(show_spinner=False)
-def cm_get_embedding_model(provider: str):
-    if provider == "Google Gemini":
-        api_key = os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
-        if not api_key:
-            raise RuntimeError(
-                "Missing Google API key. Set GOOGLE_API_KEY in your Streamlit secrets "
-                "(Manage app -> Settings -> Secrets) or your .env file."
-            )
-        # NOTE: both 'models/embedding-001' and 'models/text-embedding-004' have been
-        # superseded. 'gemini-embedding-001' is the current generally-available
-        # Gemini embedding model (as of mid-2026).
-        return GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001", google_api_key=api_key)
-    return MistralAIEmbeddings()
+def cm_get_embedding_model():
+    """Return Google Gemini embeddings (used for vector store indexing)."""
+    api_key = os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        raise RuntimeError(
+            "Missing Google API key. Set GOOGLE_API_KEY in your Streamlit secrets "
+            "(Manage app -> Settings -> Secrets) or your .env file."
+        )
+    return GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001", google_api_key=api_key)
 
 @st.cache_resource(show_spinner=False)
-def cm_get_llm(provider: str, model_name: str, temperature: float):
-    if provider == "Google Gemini":
-        return ChatGoogleGenerativeAI(model=model_name, temperature=temperature)
-    return ChatMistralAI(model=model_name, temperature=temperature)
+def cm_get_llm(model_name: str, temperature: float):
+    """Return a Groq chat model."""
+    return ChatGroq(model=model_name, temperature=temperature)
 
 def cm_clear_chroma_system_cache():
     try:
@@ -228,20 +223,20 @@ def cm_clear_chroma_system_cache():
     except Exception:
         pass
 
-def cm_load_existing_vectorstore(provider: str):
+def cm_load_existing_vectorstore():
     if os.path.isdir(PERSIST_DIR) and os.listdir(PERSIST_DIR):
         cm_clear_chroma_system_cache()
         try:
             return Chroma(
                 persist_directory=PERSIST_DIR,
-                embedding_function=cm_get_embedding_model(provider),
+                embedding_function=cm_get_embedding_model(),
                 collection_name=COLLECTION_NAME,
             )
         except Exception:
             return None
     return None
 
-def cm_add_chunks_to_store(chunks, provider: str):
+def cm_add_chunks_to_store(chunks):
     """Embed and add chunks to the vector store.
 
     Raises a clear, actionable error instead of letting the raw
@@ -261,7 +256,7 @@ def cm_add_chunks_to_store(chunks, provider: str):
         if st.session_state.cm_vectorstore is None:
             st.session_state.cm_vectorstore = Chroma.from_documents(
                 documents=chunks,
-                embedding=cm_get_embedding_model(provider),
+                embedding=cm_get_embedding_model(),
                 persist_directory=PERSIST_DIR,
                 collection_name=COLLECTION_NAME,
             )
@@ -269,20 +264,18 @@ def cm_add_chunks_to_store(chunks, provider: str):
             st.session_state.cm_vectorstore.add_documents(chunks)
     except Exception as e:
         msg = str(e)
-        if provider == "Google Gemini" and any(
+        if any(
             kw in msg for kw in ("API key", "API_KEY", "PERMISSION_DENIED", "403", "UNAUTHENTICATED")
         ):
             raise RuntimeError(
-                "Google Gemini rejected the request — this is almost always an invalid or "
+                "Embedding request rejected — this is almost always an invalid or "
                 "missing API key. Check GOOGLE_API_KEY in Streamlit secrets (Manage app -> "
                 f"Settings -> Secrets). Raw error: {msg}"
             ) from e
-        if provider == "Google Gemini" and any(kw in msg for kw in ("404", "not found", "NOT_FOUND")):
+        if any(kw in msg for kw in ("404", "not found", "NOT_FOUND")):
             raise RuntimeError(
-                "Google Gemini embedding model not found — it may have been deprecated or "
-                "unavailable for your API key/project. Run ListModels (see Gemini API docs) "
-                "to see which embedding models your key currently supports, and update the "
-                f"model name in cm_get_embedding_model accordingly. Raw error: {msg}"
+                "Embedding model not found — it may have been deprecated or "
+                "unavailable for your API key/project. Raw error: {msg}"
             ) from e
         if any(kw in msg for kw in ("429", "RESOURCE_EXHAUSTED", "quota", "rate limit")):
             raise RuntimeError(
@@ -291,7 +284,7 @@ def cm_add_chunks_to_store(chunks, provider: str):
             ) from e
         raise RuntimeError(f"Embedding failed ({type(e).__name__}): {msg}") from e
 
-def cm_process_documents(uploaded_files, urls, chunk_size, chunk_overlap, provider: str):
+def cm_process_documents(uploaded_files, urls, chunk_size, chunk_overlap):
     splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
     added, skipped = [], []
     for uploaded_file in uploaded_files or []:
@@ -315,7 +308,7 @@ def cm_process_documents(uploaded_files, urls, chunk_size, chunk_overlap, provid
             c.metadata["doc_type"] = "pdf"
         if chunks:
             try:
-                cm_add_chunks_to_store(chunks, provider)
+                cm_add_chunks_to_store(chunks)
                 added.append({"name": uploaded_file.name, "type": "pdf", "chunks": len(chunks)})
             except Exception as e:
                 skipped.append({"name": uploaded_file.name, "reason": str(e)})
@@ -335,7 +328,7 @@ def cm_process_documents(uploaded_files, urls, chunk_size, chunk_overlap, provid
                 c.metadata["doc_type"] = "url"
             if chunks:
                 try:
-                    cm_add_chunks_to_store(chunks, provider)
+                    cm_add_chunks_to_store(chunks)
                     counts = defaultdict(int)
                     for c in chunks:
                         counts[c.metadata.get("source", "unknown")] += 1
@@ -384,14 +377,14 @@ def cm_extract_text(content) -> str:
         return "\n".join(p for p in parts if p).strip()
     return str(content)
 
-def cm_answer_question(query, k, fetch_k, lambda_mult, provider, model_name, temperature):
+def cm_answer_question(query, k, fetch_k, lambda_mult, model_name, temperature):
     retriever = st.session_state.cm_vectorstore.as_retriever(
         search_type="mmr", search_kwargs={"k": k, "fetch_k": fetch_k, "lambda_mult": lambda_mult}
     )
     docs = retriever.invoke(query)
     context = "\n\n".join(doc.page_content for doc in docs)
     final_prompt = CM_PROMPT.invoke({"context": context, "question": query})
-    response = cm_get_llm(provider, model_name, temperature).invoke(final_prompt)
+    response = cm_get_llm(model_name, temperature).invoke(final_prompt)
     answer_text = cm_extract_text(response.content)
     seen, sources, passages = set(), [], []
     for doc in docs:
@@ -426,7 +419,7 @@ def cm_synthesize_speech(text: str, voice_mode: str) -> bytes:
     buf.seek(0)
     return buf.read()
 
-def cm_handle_query(query, k, fetch_k, lambda_mult, provider, model_name, temperature, voice_answers, voice_mode):
+def cm_handle_query(query, k, fetch_k, lambda_mult, model_name, temperature, voice_answers, voice_mode):
     st.session_state.cm_messages.append({"role": "user", "content": query})
     with st.chat_message("user", avatar="🧭"):
         st.markdown(query)
@@ -438,7 +431,7 @@ def cm_handle_query(query, k, fetch_k, lambda_mult, provider, model_name, temper
         else:
             with st.spinner("Turning pages..."):
                 try:
-                    answer, sources, passages = cm_answer_question(query, k, fetch_k, lambda_mult, provider, model_name, temperature)
+                    answer, sources, passages = cm_answer_question(query, k, fetch_k, lambda_mult, model_name, temperature)
                 except Exception as e:
                     answer, sources, passages = f"Error: {e}", [], []
                 st.markdown(answer)
@@ -674,9 +667,8 @@ elif app_mode == "CourseMate-AI (Documents)":
     if "cm_last_voice_hash" not in st.session_state: st.session_state.cm_last_voice_hash = None
 
     # Load existing store on start
-    cm_provider_choice = st.sidebar.selectbox("RAG Engine Provider", ["Google Gemini", "Mistral AI"], index=0)
     if st.session_state.cm_vectorstore is None:
-        st.session_state.cm_vectorstore = cm_load_existing_vectorstore(cm_provider_choice)
+        st.session_state.cm_vectorstore = cm_load_existing_vectorstore()
 
     with st.sidebar:
         st.markdown('<div class="idx-step"><span class="idx-step-num">①</span><span class="idx-step-title">Add your sources</span></div>', unsafe_allow_html=True)
@@ -696,7 +688,7 @@ elif app_mode == "CourseMate-AI (Documents)":
                 st.warning("Please add a PDF or a URL first.")
             else:
                 with st.spinner("Reading & Indexing..."):
-                    added, skipped = cm_process_documents(uploaded_files, urls, chunk_size, chunk_overlap, cm_provider_choice)
+                    added, skipped = cm_process_documents(uploaded_files, urls, chunk_size, chunk_overlap)
                     st.session_state.cm_processed_files.extend(added)
                     if added: st.success(f"Indexed {len(added)} item(s).")
                     for s in skipped: st.error(f"{s['name']}: {s['reason']}")
@@ -710,13 +702,9 @@ elif app_mode == "CourseMate-AI (Documents)":
         st.divider()
         st.markdown('<div class="idx-step"><span class="idx-step-num">②</span><span class="idx-step-title">Analysis settings</span></div>', unsafe_allow_html=True)
         
-        # Populate model selection based on provider
-        if cm_provider_choice == "Google Gemini":
-            cm_models = ["gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-1.5-flash", "gemini-1.5-pro"]
-        else:
-            cm_models = ["mistral-small-latest", "mistral-medium-latest", "mistral-large-latest"]
-        
-        model_name = st.selectbox("Model", cm_models, index=0)
+        # Groq model selection
+        model_name = "openai/gpt-oss-120b"
+        st.markdown(f'<span class="idx-tag">Model: {model_name}</span>', unsafe_allow_html=True)
         temperature = st.slider("Temperature", 0.0, 1.0, 0.2, 0.05)
 
         voice_answers = st.checkbox("🔊 Read answers aloud", value=False)
@@ -782,11 +770,11 @@ elif app_mode == "CourseMate-AI (Documents)":
                     st.warning("Unrecognized audio input. Speak closer to the microphone.")
 
         if active_query:
-            cm_handle_query(active_query, k, fetch_k, lambda_mult, cm_provider_choice, model_name, temperature, voice_answers, voice_mode)
+            cm_handle_query(active_query, k, fetch_k, lambda_mult, model_name, temperature, voice_answers, voice_mode)
 
         typed_query = st.chat_input("Ask something about your indexed documents...")
         if typed_query:
-            cm_handle_query(typed_query, k, fetch_k, lambda_mult, cm_provider_choice, model_name, temperature, voice_answers, voice_mode)
+            cm_handle_query(typed_query, k, fetch_k, lambda_mult, model_name, temperature, voice_answers, voice_mode)
 elif app_mode == "🎓 Socratic Tutor":
     st.markdown("""
     <style>
